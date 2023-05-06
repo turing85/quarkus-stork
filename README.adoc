@@ -1,0 +1,84 @@
+= quarkus-stork
+
+Playing around with quarkus-stork.
+
+== Services registered for discovery
+This application defines two services (`a` and `b`), and two instances per service (`red` and `blue` for `a`; `green` and `yellow` for `b`). Each instance starts a separate HTTP server on a separate port (`a.blue` on port `8081`, `a.red` on port `8082`, `b.green` on port `8083` and `b.yellow` on port `8084`).
+
+All four instance implementations (created in link:src/main/java/de/turing85/service/DiscoverableServiceProducer.java[`DiscoverableServiceProducer.java`]) are started and registered through method `startService()` in class link:src/main/java/de/turing85/service/DiscoverableService.java[`DiscoverableService.java`]. Through method `serviceReadyCheck()`, each instance in consul also has a http-based ready-check.
+
+== Discovery
+A fifth "main HTTP service" is started on port `8080` and exposes endpoints `/greeting/a` and `/greeting/b`. In the background, two rest-clients (link:src/main/java/de/turing85/stork/client/AClient.java[`AClient.java`] and link:src/main/java/de/turing85/stork/client/BClient.java[`BClient.java`]) are used to query one of the four instances registered to consul. The implementation can be found in link:src/main/java/de/turing85/stork/api/Resource.java[`Resource.java`].
+
+== Building and starting the application
+.Building the application
+[source, bash]
+----
+./mvnw clean package
+----
+
+.Starting the application
+[source, bash]
+----
+docker-compose \
+  -f local-deployment/docker-compose.yml \
+  up \
+    --build \
+    --detach
+----
+
+== Testing the behaviour
+if we now access link:http://locahost:8008/greeting/a[] multiple times, we expect to get `Hello from a.blue` and `Hello from a.red` in turn. Same for link:http://locahost:8008/greeting/b[].
+
+== Inspecting consul
+We can access consul under link:http://localhost:8500[] to inspect the  services, instances and the state of the checks.
+
+== Stopping service, inspecting consul
+When we now stop the service
+
+.Stopping `service`
+[source, bash]
+----
+docker-compose -f local-deployment/docker-compose.yml \
+  stop \
+  service
+----
+
+access consul again at link:http://localhost:8500[] and wait a few seconds, we will see the services `a` and `b` turning red due to failing checks.
+
+When we start the service again
+
+.Starting `service`
+[source, bash]
+----
+docker-compose -f local-deployment/docker-compose.yml \
+  start \
+  service
+----
+
+access consul again at link:http://localhost:8500[] and wait a few seconds, we will see the services `a` and `b` turning green again.
+
+== Implementation details and lesson learned
+There are four instance registration in consul. Each instance has a health check. Each health check must have a unique id (but all can have the same name). If all health checks use the same id, only one instance will have a health check since each service registration will override the previous check, so the last service registered will "win".
+
+== Cleanup
+
+.Stop application
+[source, bash]
+----
+docker-compose \
+  -f local-deployment/docker-compose.yml \
+  down
+----
+
+.Remove images
+[source, bash]
+----
+docker image rm quarkus-stork/service
+----
+
+.Project Cleanup
+[source, bash]
+----
+./mvnw clean
+----

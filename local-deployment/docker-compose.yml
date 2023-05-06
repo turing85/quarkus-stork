@@ -1,0 +1,39 @@
+version: "3.8"
+services:
+  service:
+    container_name: service
+    image: quarkus-stork/service
+    build:
+      context: ..
+      dockerfile: ./containerfiles/Containerfile.quarkus-alpine
+    env_file:
+      - service/.env
+    environment:
+      SERVICE_HOSTNAME: service
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8083"
+      - "8084:8084"
+    depends_on:
+      - consul
+    networks:
+      - default
+  consul:
+    container_name: consul
+    image: docker.io/consul:1.15.2
+    ports:
+      - "8500:8500"
+      - "8501:8501"
+    command:
+      - agent
+      - -dev
+      - -ui
+      - -client=0.0.0.0
+      - -bind=0.0.0.0
+      - --https-port=8501
+    networks:
+      - default
+networks:
+  default:

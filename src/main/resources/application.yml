@@ -1,0 +1,27 @@
+consul:
+  host: localhost
+  port: 8500
+quarkus:
+  stork:
+    a:
+      service-discovery:
+        type: consul
+        consul-host: "${consul.host}"
+        consul-port: "${consul.port}"
+    b:
+      service-discovery:
+        type: consul
+        consul-host: "${consul.host}"
+        consul-port: "${consul.port}"
+service:
+  hostname: "${SERVICE_HOSTNAME:localhost}"
+  a:
+    blue:
+      port: 8081
+    red:
+      port: 8082
+  b:
+    green:
+      port: 8083
+    yellow:
+      port: 8084
